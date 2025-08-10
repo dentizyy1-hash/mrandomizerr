@@ -1,0 +1,214 @@
+--[[ 🌟 Pet Mutation Finder - SerenityScripts Edition (Full Update with Loading Screen & Notification) ]] 
+pcall(function()
+    local Players = game:GetService("Players")
+    local LocalPlayer = Players.LocalPlayer
+    local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+    local Workspace = game:GetService("Workspace")
+    local TweenService = game:GetService("TweenService")
+    local RunService = game:GetService("RunService")
+    local StarterGui = game:GetService("StarterGui")
+
+    local existingGUI = PlayerGui:FindFirstChild("PetMutationFinder")
+    if existingGUI then existingGUI:Destroy() end
+
+    local Mutations = {
+        "Shiny", "Inverted", "Frozen", "Windy", "Golden",
+        "Mega", "Tiny", "Tranquil", "IronSkin", "Radiant",
+        "Rainbow", "Shocked", "Ascended"
+    }
+    local CurrentMutation = Mutations[math.random(#Mutations)]
+    local ESPEnabled = true
+
+    -- GUI Base
+    local GUI = Instance.new("ScreenGui")
+    GUI.Name = "PetMutationFinder"
+    GUI.ResetOnSpawn = false
+    GUI.IgnoreGuiInset = true
+    GUI.Parent = PlayerGui
+
+    -- Loading Overlay
+    local LoadingScreen = Instance.new("Frame")
+    LoadingScreen.Size = UDim2.new(1, 0, 1, 0)
+    LoadingScreen.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+    LoadingScreen.BackgroundTransparency = 0
+    LoadingScreen.ZIndex = 999
+    LoadingScreen.Visible = false
+    LoadingScreen.Parent = GUI
+
+    local LoadingText = Instance.new("TextLabel", LoadingScreen)
+    LoadingText.Size = UDim2.new(1, 0, 0, 60)
+    LoadingText.Position = UDim2.new(0, 0, 0.5, -30)
+    LoadingText.BackgroundTransparency = 1
+    LoadingText.Font = Enum.Font.FredokaOne
+    LoadingText.TextSize = 30
+    LoadingText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    LoadingText.TextStrokeTransparency = 0.5
+    LoadingText.Text = "🔁 Changing your mutation..."
+    LoadingText.TextScaled = true
+    LoadingText.ZIndex = 1000
+
+    -- Main Frame
+    local Frame = Instance.new("Frame", GUI)
+    Frame.Size = UDim2.new(0, 320, 0, 260)
+    Frame.Position = UDim2.new(0.02, 0, 0.3, 0)
+    Frame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+    Frame.BorderSizePixel = 0
+    Frame.Active = true
+    Frame.Draggable = true
+
+    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 12)
+
+    local Shadow = Instance.new("ImageLabel", Frame)
+    Shadow.BackgroundTransparency = 1
+    Shadow.Size = UDim2.new(1, 20, 1, 20)
+    Shadow.Position = UDim2.new(0, -10, 0, -10)
+    Shadow.Image = "rbxassetid://1316045217"
+    Shadow.ImageColor3 = Color3.new(0, 0, 0)
+    Shadow.ImageTransparency = 0.5
+    Shadow.ScaleType = Enum.ScaleType.Slice
+    Shadow.SliceCenter = Rect.new(10, 10, 118, 118)
+    Shadow.ZIndex = 0
+
+    -- Title
+    local Title = Instance.new("TextLabel", Frame)
+    Title.Size = UDim2.new(1, 0, 0, 40)
+    Title.BackgroundTransparency = 1
+    Title.Text = "🔬 Pet Mutation Finder"
+    Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Title.Font = Enum.Font.FredokaOne
+    Title.TextSize = 20
+    Title.TextStrokeTransparency = 0.8
+
+    -- Create Button Function
+    local function CreateButton(text, yPos, color)
+        local btn = Instance.new("TextButton", Frame)
+        btn.Size = UDim2.new(0.9, 0, 0, 36)
+        btn.Position = UDim2.new(0.05, 0, 0, yPos)
+        btn.BackgroundColor3 = color
+        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        btn.Font = Enum.Font.GothamMedium
+        btn.TextSize = 16
+        btn.Text = text
+        btn.AutoButtonColor = false
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+
+        btn.MouseEnter:Connect(function()
+            TweenService:Create(btn, TweenInfo.new(0.15), {
+                BackgroundColor3 = color:Lerp(Color3.new(1, 1, 1), 0.2)
+            }):Play()
+        end)
+
+        btn.MouseLeave:Connect(function()
+            TweenService:Create(btn, TweenInfo.new(0.15), {
+                BackgroundColor3 = color
+            }):Play()
+        end)
+
+        return btn
+    end
+
+    -- Buttons
+    local RerollButton = CreateButton("🎲 Mutation Reroll", 50, Color3.fromRGB(0, 160, 255))
+    local ToggleESPButton = CreateButton("👁 Toggle Mutation ESP", 100, Color3.fromRGB(0, 200, 120))
+    local BypassButton = CreateButton("🛡 Bypass", 150, Color3.fromRGB(140, 110, 255))
+
+    -- Footer
+    local Footer = Instance.new("TextLabel", Frame)
+    Footer.Size = UDim2.new(1, -20, 0, 40)
+    Footer.Position = UDim2.new(0, 10, 1, -50)
+    Footer.BackgroundTransparency = 1
+    Footer.Text = "Pet Randomizer - UPDATED BY SERENITYSCRIPTS"
+    Footer.TextColor3 = Color3.fromRGB(200, 200, 255)
+    Footer.Font = Enum.Font.GothamBold
+    Footer.TextSize = 13
+    Footer.TextWrapped = true
+    Footer.TextXAlignment = Enum.TextXAlignment.Center
+
+    -- Mutation Machine
+    local function FindMachine()
+        for _, obj in pairs(Workspace:GetDescendants()) do
+            if obj:IsA("Model") and obj.Name:lower():find("mutation") then
+                local part = obj:FindFirstChildWhichIsA("BasePart")
+                if part then return obj, part end
+            end
+        end
+    end
+
+    local machineModel, machinePart = FindMachine()
+    if not machineModel or not machinePart then
+        warn("❌ Mutation machine not found.")
+        return
+    end
+
+    -- ESP
+    local ESP = Instance.new("BillboardGui", machinePart)
+    ESP.Name = "MutationESP"
+    ESP.Adornee = machinePart
+    ESP.Size = UDim2.new(0, 200, 0, 40)
+    ESP.StudsOffset = Vector3.new(0, 3, 0)
+    ESP.AlwaysOnTop = true
+
+    local ESPLabel = Instance.new("TextLabel", ESP)
+    ESPLabel.Size = UDim2.new(1, 0, 1, 0)
+    ESPLabel.BackgroundTransparency = 1
+    ESPLabel.Font = Enum.Font.FredokaOne
+    ESPLabel.TextSize = 24
+    ESPLabel.TextStrokeTransparency = 0.3
+    ESPLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
+    ESPLabel.Text = CurrentMutation
+    ESPLabel.TextColor3 = Color3.fromHSV(0, 1, 1)
+
+    -- Rainbow Color Effect
+    local hue = 0
+    RunService.RenderStepped:Connect(function()
+        if ESPEnabled and ESPLabel then
+            hue = (hue + 0.01) % 1
+            ESPLabel.TextColor3 = Color3.fromHSV(hue, 1, 1)
+        end
+    end)
+
+    -- Mutation Reroll
+RerollButton.MouseButton1Click:Connect(function()
+    LoadingScreen.Visible = true
+    RerollButton.Text = "⏳ Rerolling..."
+    
+    for _ = 1, 20 do
+        ESPLabel.Text = Mutations[math.random(#Mutations)]
+        task.wait(0.1)
+    end
+    
+    CurrentMutation = Mutations[math.random(#Mutations)]
+    ESPLabel.Text = CurrentMutation
+    RerollButton.Text = "🎲 Mutation Reroll"
+    
+    -- Keep loading screen visible for 100 seconds cooldown
+    task.delay(30, function()
+        LoadingScreen.Visible = false
+
+        -- Show notification AFTER cooldown
+        StarterGui:SetCore("SendNotification", {
+            Title = "🧬 You got " .. CurrentMutation .. " mutation!",
+            Text = "" .. CurrentMutation .. "",
+            Duration = 4
+        })
+    end)
+end)
+
+
+
+    -- Toggle ESP
+    ToggleESPButton.MouseButton1Click:Connect(function()
+        ESPEnabled = not ESPEnabled
+        ESP.Enabled = ESPEnabled
+        ToggleESPButton.Text = ESPEnabled and "👁 Toggle Mutation ESP" or "🚫 Mutation ESP Off"
+    end)
+
+    -- Bypass Button
+    BypassButton.MouseButton1Click:Connect(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = "✅ Bypassed!",
+            Text = "Bypassed by SerenityScripts!",
+            Duration = 5
+        })
+    end)
+end)
